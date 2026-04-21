@@ -8,15 +8,22 @@ import json
 app = Flask(__name__)
 CORS(app)
 
-# Load model
-model = tf.keras.models.load_model("animal_model.h5")
+# ❗ DO NOT LOAD MODEL HERE (important)
+model = None
 
-# Load classes
+# Load classes once (small file OK)
 with open("classes.json") as f:
     classes = json.load(f)
 
 
-# ✅ HOME ROUTE (IMPORTANT)
+# ✅ Load model only when needed
+def load_model():
+    global model
+    if model is None:
+        model = tf.keras.models.load_model("animal_model.h5")
+
+
+# ✅ Home route
 @app.route("/")
 def home():
     return "API Running"
@@ -38,7 +45,9 @@ def preprocess_image(image):
 @app.route("/predict", methods=["POST"])
 def predict():
     try:
-        # ✅ FIXED KEY (matches frontend)
+        # 🔥 Load model only when API called
+        load_model()
+
         file = request.files["file"]
 
         image = Image.open(file.stream).convert("RGB")
@@ -54,7 +63,7 @@ def predict():
         confidence = float(pred[0][index])
 
         return jsonify({
-            "prediction": label,   # ✅ matches frontend
+            "prediction": label,
             "confidence": confidence
         })
 
